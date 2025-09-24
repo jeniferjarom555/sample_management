@@ -3,6 +3,11 @@ const app = express();
 
 app.use(express.json());
 
+app.get('/', (req, res) => {
+  res.send('Sample Management API is running!');
+});
+
+
 // Controllers
 const sampleController = require('./controllers/samplecontroller');
 const barcodeController = require('./controllers/barcodecontroller'); // to be created
