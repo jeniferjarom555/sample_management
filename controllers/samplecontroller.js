@@ -52,49 +52,49 @@ async function addTestToPatient(req, res) {
     const testData = testInfo.rows[0];
 
     // Update or create sample
-    const sampleCheck = await pool.query(
-      `SELECT * FROM samples
-       WHERE appointment_id = $1 AND patient_id = $2
-       AND sample_type = $3 AND specimen_type = $4 AND sample_color = $5`,
-      [appointment_id, patient_id, testData.sample_type, testData.specimen_type, testData.sample_color]
-    );
+// 5️⃣ Update or create sample
+const sampleCheck = await pool.query(
+  `SELECT * FROM samples
+   WHERE appointment_id = $1 AND patient_id = $2
+   AND sample_type = $3 AND specimen_type = $4 AND sample_color = $5`,
+  [appointment_id, patient_id, testData.sample_type, testData.specimen_type, testData.sample_color]
+);
 
-    let sample_id;
-    if (sampleCheck.rows.length > 0) {
-      // Sample exists → reuse
-      sample_id = sampleCheck.rows[0].sample_id;
+let sample_id;
+if (sampleCheck.rows.length > 0) {
+  // Sample exists → reuse
+  sample_id = sampleCheck.rows[0].sample_id;
 
-      // Update tests array if test not already present
-      await pool.query(
-        `UPDATE samples
-         SET tests = CASE
-           WHEN NOT (tests @> $1::jsonb) THEN tests || $1::jsonb
-           ELSE tests
-         END
-         WHERE sample_id = $2`,
-        [JSON.stringify([patient_test_id]), sample_id]
-      );
+  await pool.query(
+    `UPDATE samples
+     SET tests = CASE
+       WHEN NOT (tests @> $1::jsonb) THEN tests || $1::jsonb
+       ELSE tests
+     END
+     WHERE sample_id = $2`,
+    [JSON.stringify([patient_test_id]), sample_id]
+  );
+} else {
+  // Sample doesn’t exist → create new
+  sample_id = uuidv4();
+  await pool.query(
+    `INSERT INTO samples
+     (sample_id, appointment_id, patient_id, tests, sample_type, specimen_type, sample_color, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+    [sample_id, appointment_id, patient_id, JSON.stringify([patient_test_id]),
+     testData.sample_type, testData.specimen_type, testData.sample_color]
+  );
+}
 
-    } else {
-      // Sample doesn’t exist → create new
-      sample_id = uuidv4();
-      await pool.query(
-        `INSERT INTO samples
-         (sample_id, appointment_id, patient_id, tests, sample_type, specimen_type, sample_color, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())`,
-        [sample_id, appointment_id, patient_id, JSON.stringify([patient_test_id]),
-         testData.sample_type, testData.specimen_type, testData.sample_color]
-      );
-    }
+// Link patient_test to sample
+await pool.query(
+  `UPDATE patient_tests SET sample_id = $1 WHERE patient_test_id = $2`,
+  [sample_id, patient_test_id]
+);
 
-    // Link patient_test to sample
-    await pool.query(
-      `UPDATE patient_tests SET sample_id = $1 WHERE patient_test_id = $2`,
-      [sample_id, patient_test_id]
-    );
+// ✅ Return sample_id to frontend
+res.status(201).json({ message: "Test added", test: testData, sample_id });
 
-    // Return test with sample_id
-    res.status(201).json({ message: "Test added to patient", test: { ...testData, sample_id } });
 
   } catch (error) {
     console.error(error);
