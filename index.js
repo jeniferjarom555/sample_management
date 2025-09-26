@@ -26,7 +26,7 @@ app.get(
 // Fetch grouped tests for UI
 app.get(
   '/appointments/:appointment_id/patients/:patient_id/grouped-tests',
-  appointmentController.getGroupedTests
+  sampleController.getGroupedTests
 );
 
 // ------------------------
