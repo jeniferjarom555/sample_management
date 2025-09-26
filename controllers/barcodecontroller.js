@@ -27,44 +27,69 @@ async function insertBarcodes(count = 10) {
 // barcodeController.js
 async function matchSample(req, res) {
   try {
-    const { sample_id, barcode_id } = req.body;
+    let { sample_id, barcode_id } = req.body;
 
-    // safety check: both IDs must exist
+    if (!sample_id || !barcode_id) {
+      return res.status(400).json({ success: false, error: "sample_id and barcode_id are required" });
+    }
+
+    barcode_id = barcode_id.trim();
+
+    // 1. Check if sample exists
     const sampleCheck = await pool.query(
       "SELECT * FROM samples WHERE sample_id = $1",
       [sample_id]
     );
     if (sampleCheck.rowCount === 0) {
-      return res.status(404).json({ error: "Sample not found" });
+      return res.status(404).json({ success: false, error: "Sample not found" });
     }
-// check barcode exists & pending
+
+    const sampleRow = sampleCheck.rows[0];
+
+    // 2. Check if sample already has a barcode
+    if (sampleRow.barcode_id) {
+      return res.json({
+        success: false,
+        message: `Sample ${sample_id} already has a barcode assigned: ${sampleRow.barcode_id}`,
+      });
+    }
+
+    // 3. Check if barcode exists and is pending
     const barcodeCheck = await pool.query(
-      "SELECT * FROM barcode_table WHERE barcode_id = $1 AND status = 'pending'",
+      "SELECT * FROM barcode_table WHERE LOWER(barcode_id) = LOWER($1)",
       [barcode_id]
     );
     if (barcodeCheck.rowCount === 0) {
-      return res.status(404).json({ error: "Barcode not found or already assigned" });
+      return res.status(404).json({ success: false, error: "Barcode not found" });
     }
 
-    // Step 1: link barcode_id in samples table
+    const barcodeRow = barcodeCheck.rows[0];
+    if (barcodeRow.status === "assigned") {
+      return res.json({
+        success: false,
+        message: `Barcode ${barcode_id} is already assigned to a sample`,
+      });
+    }
+
+    // 4. Assign barcode to sample
     await pool.query(
       "UPDATE samples SET barcode_id = $1 WHERE sample_id = $2",
       [barcode_id, sample_id]
     );
 
-    // Step 2: update barcode_table → set status + attach sample_id
+    // 5. Update barcode_table → mark as assigned
     await pool.query(
       "UPDATE barcode_table SET status = 'assigned', sample_id = $1 WHERE barcode_id = $2",
       [sample_id, barcode_id]
     );
 
-    res.json({
-      message: `Barcode ${barcode_id} assigned to sample ${sample_id}`
+    return res.json({
+      success: true,
+      message: `✅ Barcode ${barcode_id} assigned to sample ${sample_id}`,
     });
-
   } catch (err) {
     console.error("Error in matchSample:", err.message);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ success: false, error: "Internal server error" });
   }
 }
 
@@ -101,9 +126,13 @@ async function getSampleByBarcode(req, res) {
   }
 }
 
+
+
+
+
 module.exports = {
   insertBarcodes,
   matchSample,
-  getSampleByBarcode
+  getSampleByBarcode,
 };
 
