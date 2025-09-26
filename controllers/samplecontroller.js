@@ -5,6 +5,7 @@ const pool = require('../db');
 // =====================
 // Add Test to Patient
 // =====================
+
 async function addTestToPatient(req, res) {
   try {
     const { appointment_id, patient_id } = req.params;
