@@ -199,8 +199,7 @@ async function generateSamples(req, res) {
 // Get Grouped Tests for UI
 // =====================
 // routes/getGroupedTests.js
-
-const { pool } = require('../db'); // make sure your db pool is imported
+ // make sure your db pool is imported
 
 async function getGroupedTests(req, res) {
   try {
