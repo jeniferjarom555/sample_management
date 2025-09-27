@@ -201,6 +201,7 @@ async function generateSamples(req, res) {
 // routes/getGroupedTests.js
  // make sure your db pool is imported
 
+
 async function getGroupedTests(req, res) {
   try {
     const { appointment_id, patient_id } = req.params;
@@ -226,7 +227,6 @@ async function getGroupedTests(req, res) {
     const groupedTests = [];
 
     for (const sample of samples) {
-      // sample.tests is an array of patient_test_ids (JSON)
       const patientTestIds = sample.tests;
 
       if (!patientTestIds || patientTestIds.length === 0) continue;
@@ -241,10 +241,11 @@ async function getGroupedTests(req, res) {
       );
 
       groupedTests.push({
-        sample_id: sample.sample_id,  // ✅ from DB
+        sample_id: sample.sample_id,
         sample_type: sample.sample_type,
         specimen_type: sample.specimen_type,
         sample_color: sample.sample_color,
+        barcode_id: sample.barcode_id || null, // ✅ include barcode_id
         tests: testsResult.rows
       });
     }
@@ -255,6 +256,7 @@ async function getGroupedTests(req, res) {
     res.status(500).json({ message: "Internal server error", error: err.message });
   }
 }
+
 // =====================
 // Get All Tests
 // =====================
