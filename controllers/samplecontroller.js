@@ -200,6 +200,7 @@ async function generateSamples(req, res) {
 // =====================
 // routes/getGroupedTests.js
 
+const { pool } = require('../db'); // make sure your db pool is imported
 
 async function getGroupedTests(req, res) {
   try {
@@ -209,53 +210,45 @@ async function getGroupedTests(req, res) {
       return res.status(400).json({ message: "appointment_id and patient_id required" });
     }
 
-    // 1️⃣ Fetch tests along with their linked sample_id from DB
-    const testsResult = await pool.query(
-      `SELECT 
-          pt.patient_test_id, 
-          t.test_id, 
-          t.test_name, 
-          s.sample_id,
-          s.sample_type, 
-          s.specimen_type, 
-          s.sample_color
-       FROM patient_tests pt
-       JOIN tests t ON pt.test_id = t.test_id
-       JOIN samples s ON pt.sample_id = s.sample_id   -- ✅ link to samples table
-       WHERE pt.appointment_patient_id = (
-         SELECT id FROM appointment_patients 
-         WHERE appointment_id = $1 AND patient_id = $2
-       )`,
+    // Fetch all samples for this patient in this appointment
+    const samplesResult = await pool.query(
+      `SELECT *
+       FROM samples
+       WHERE appointment_id = $1 AND patient_id = $2`,
       [appointment_id, patient_id]
     );
 
-    const tests = testsResult.rows;
+    const samples = samplesResult.rows;
 
-    if (tests.length === 0) {
+    if (samples.length === 0) {
       return res.status(200).json({ grouped_tests: [] });
     }
 
-    // 2️⃣ Group by sample_id (not by type/color)
-    const groupedMap = {};
-    for (const test of tests) {
-      if (!groupedMap[test.sample_id]) {
-        groupedMap[test.sample_id] = {
-          sample_id: test.sample_id, // ✅ use DB sample_id
-          sample_type: test.sample_type,
-          specimen_type: test.specimen_type,
-          sample_color: test.sample_color,
-          tests: []
-        };
-      }
-      groupedMap[test.sample_id].tests.push({
-        patient_test_id: test.patient_test_id,
-        test_id: test.test_id,
-        test_name: test.test_name
+    const groupedTests = [];
+
+    for (const sample of samples) {
+      // sample.tests is an array of patient_test_ids (JSON)
+      const patientTestIds = sample.tests;
+
+      if (!patientTestIds || patientTestIds.length === 0) continue;
+
+      // Fetch test details for this sample
+      const testsResult = await pool.query(
+        `SELECT pt.patient_test_id, t.test_id, t.test_name
+         FROM patient_tests pt
+         JOIN tests t ON pt.test_id = t.test_id
+         WHERE pt.patient_test_id = ANY($1::uuid[])`,
+        [patientTestIds]
+      );
+
+      groupedTests.push({
+        sample_id: sample.sample_id,  // ✅ from DB
+        sample_type: sample.sample_type,
+        specimen_type: sample.specimen_type,
+        sample_color: sample.sample_color,
+        tests: testsResult.rows
       });
     }
-
-    // 3️⃣ Convert groupedMap to array
-    const groupedTests = Object.values(groupedMap);
 
     res.status(200).json({ grouped_tests: groupedTests });
   } catch (err) {
@@ -263,7 +256,6 @@ async function getGroupedTests(req, res) {
     res.status(500).json({ message: "Internal server error", error: err.message });
   }
 }
-
 // =====================
 // Get All Tests
 // =====================
