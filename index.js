@@ -3,6 +3,10 @@ const app = express();
 
 // Middleware
 app.use(express.json());
+// ✅ Health check endpoint
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
 
 // Controllers
 const appointmentController = require('./controllers/appointmentcontroller');
