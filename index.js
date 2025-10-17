@@ -1,8 +1,9 @@
 const express = require('express');
 const app = express();
-
+import morgan from "morgan"; 
 // Middleware
 app.use(express.json());
+app.use(morgan("tiny"));
 // ✅ Health check endpoint
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
