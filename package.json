@@ -1,5 +1,5 @@
 {
-  "name": "BACKEND_APIs_PHLEBOAPP",
+  "name": "projects",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -20,6 +20,7 @@
     "nodemailer": "^7.0.10",
     "pdfkit": "^0.17.1",
     "pg": "^8.16.3",
+    "resend": "^6.2.2",
     "twilio": "^5.9.0",
     "uuid": "^11.1.0"
   }

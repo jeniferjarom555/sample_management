@@ -1,50 +1,51 @@
 import pool from "../db.js";
-import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import { Resend } from "resend";
 
 dotenv.config();
 
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Send OTP
 const sendOtp = async (req, res) => {
   const { email } = req.body;
 
-  if (!email) return res.status(400).json({ success: false, message: "Email required" });
+  if (!email) {
+    return res.status(400).json({ success: false, message: "Email required" });
+  }
 
+  // Generate OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
   try {
-    // Save OTP in DB
+    // Save to DB
     await pool.query(
       "INSERT INTO otps (email, otp, expires_at) VALUES ($1, $2, $3)",
       [email, otp, expiresAt]
     );
 
-    // Nodemailer config
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS, // must be App Password
-      },
+    // Send via Resend
+    await resend.emails.send({
+      from: "Bethel Lab <onboarding@resend.dev>", // you can customize later
+      to: email,
+      subject: "Your OTP Code for Login",
+      text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
     });
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Your OTP Code",
-      text: `Your OTP is ${otp}. It expires in 10 minutes.`,
-    };
+    console.log(`✅ OTP sent via Resend to ${email}`);
 
-    // Send email
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ OTP sent to ${email}: ${otp}`);
-
-    return res.status(200).json({ success: true, message: "OTP saved. Email will be sent shortly." });
+    return res.status(200).json({
+      success: true,
+      message: "OTP saved and email sent successfully.",
+    });
   } catch (err) {
     console.error("❌ Error sending OTP:", err);
     return res.status(500).json({ success: false, message: "Failed to send OTP" });
   }
 };
+
+
 
 const verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
