@@ -27,7 +27,9 @@ const sendOtp = async (req, res) => {
 
     // Send via Resend
     await resend.emails.send({
-      from: "Bethel Lab <onboarding@resend.dev>", // you can customize later
+      from: "Bethel Diagnostics 🧪 <no-reply@bethellabs.com>",
+
+// you can customize later
       to: email,
       subject: "Your OTP Code for Login",
       text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
