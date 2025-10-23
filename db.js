@@ -1,4 +1,7 @@
-const { Pool } = require('pg');
+import pkg from 'pg';
+const { Pool } = pkg;
+import dotenv from 'dotenv';
+dotenv.config();
 
 const isRender = !!process.env.DATABASE_URL; // Detect Render environment
 
@@ -6,7 +9,7 @@ const pool = new Pool({
   connectionString: isRender 
     ? process.env.DATABASE_URL 
     : 'postgresql://postgres:admin123@localhost:5432/generate_samp',
-  ...(isRender && { ssl: { rejectUnauthorized: false } }), // Only enable SSL on Render
+  ...(isRender && { ssl: { rejectUnauthorized: false } }),
 });
 
 // Optional: test connection
@@ -19,4 +22,5 @@ pool.connect((err, client, release) => {
   }
 });
 
-module.exports = pool;
+// Export as default for ES modules
+export default pool;
