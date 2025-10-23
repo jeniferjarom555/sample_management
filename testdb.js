@@ -1,4 +1,4 @@
-const pool = require("./db");
+import pool from "../db.js";
 
 (async () => {
   const phone = "8122761467";
