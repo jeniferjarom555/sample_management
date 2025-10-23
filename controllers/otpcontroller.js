@@ -4,7 +4,6 @@ import dotenv from "dotenv";
 
 dotenv.config();                        // Same effect as require("dotenv").config()
 
-
 // Send OTP via Email
 const sendOtp = async (req, res) => {
   const { email } = req.body;
@@ -41,11 +40,17 @@ const sendOtp = async (req, res) => {
       text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
     };
 
-    // Send email
-    await transporter.sendMail(mailOptions);
+    // ✅ Send email asynchronously (non-blocking)
+    transporter.sendMail(mailOptions)
+      .then(() => console.log(`✅ OTP sent to ${email}: ${otp}`))
+      .catch(err => console.error("❌ Error sending OTP:", err));
 
-    console.log(`✅ OTP sent to ${email}: ${otp}`);
-    return res.status(200).json({ success: true, message: "OTP sent successfully" });
+    // Respond immediately without waiting for email to be sent
+    return res.status(200).json({ 
+      success: true, 
+      message: "OTP saved. Email will be sent shortly." 
+    });
+
   } catch (err) {
     console.error("❌ Error sending OTP:", err);
     return res.status(500).json({ success: false, message: "Failed to send OTP" });
