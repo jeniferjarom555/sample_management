@@ -64,4 +64,4 @@ async function generatePDF(req, res) {
     }
 }
 
-module.exports = { generatePDF };
+export default  { generatePDF };

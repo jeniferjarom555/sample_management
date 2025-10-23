@@ -89,4 +89,4 @@ const verifyOtp = async (req, res) => {
   }
 };
 
-module.exports = { sendOtp, verifyOtp };
+export default { sendOtp, verifyOtp };

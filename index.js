@@ -1,20 +1,24 @@
-const express = require('express');
+// index.js
+import express from "express";
+import morgan from "morgan";
+
+// Import controllers using ES module syntax
+import appointmentController from './controllers/appointmentcontroller.js';
+import sampleController from './controllers/samplecontroller.js';
+import barcodeController from './controllers/barcodecontroller.js';
+import pdfController from './controllers/pdfcontroller.js';
+import otpController from './controllers/otpcontroller.js';
+
 const app = express();
-import morgan from "morgan"; 
+
 // Middleware
 app.use(express.json());
 app.use(morgan("tiny"));
+
 // ✅ Health check endpoint
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
-
-// Controllers
-const appointmentController = require('./controllers/appointmentcontroller');
-const sampleController = require('./controllers/samplecontroller');
-const barcodeController = require('./controllers/barcodecontroller');
-const pdfController = require('./controllers/pdfcontroller');
-const otpController = require('./controllers/otpcontroller');
 
 // ------------------------
 // Appointment Routes
@@ -22,13 +26,11 @@ const otpController = require('./controllers/otpcontroller');
 app.get('/appointments', appointmentController.getAppointments);
 app.get('/appointments/:id', appointmentController.getAppointmentById);
 
-// Fetch all tests for a patient (non-grouped)
 app.get(
   '/appointments/:appointment_id/patients/:patient_id/patient-tests',
   appointmentController.getPatientTests
 );
 
-// Fetch grouped tests for UI
 app.get(
   '/appointments/:appointment_id/patients/:patient_id/grouped-tests',
   sampleController.getGroupedTests

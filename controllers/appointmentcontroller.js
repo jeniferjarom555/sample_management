@@ -107,4 +107,4 @@ const getPatientTests = async (req, res) => {
   }
 };
 
-module.exports = { getAppointments, getAppointmentById, getPatientTests };
+export default { getAppointments, getAppointmentById, getPatientTests };

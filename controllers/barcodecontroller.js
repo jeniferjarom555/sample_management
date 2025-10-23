@@ -129,8 +129,7 @@ async function getSampleByBarcode(req, res) {
 
 
 
-
-module.exports = {
+export default {
   insertBarcodes,
   matchSample,
   getSampleByBarcode,

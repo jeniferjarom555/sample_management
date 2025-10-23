@@ -273,4 +273,4 @@ async function getTests(req, res) {
   }
 }
 
-module.exports = { generateSamples, getTests, addTestToPatient, getGroupedTests };
+export default  { generateSamples, getTests, addTestToPatient, getGroupedTests };
