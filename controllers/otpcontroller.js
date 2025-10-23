@@ -1,59 +1,68 @@
 // otpController.js
 const pool = require("../db");
+const nodemailer = require("nodemailer");
+require("dotenv").config();
 
-// Define the single allowed phlebotomist phone number
-const allowedPhone = "8122761467"; // <-- change this to your number
-
-// Send OTP
+// Send OTP via Email
 const sendOtp = async (req, res) => {
-  const { phone } = req.body;
+  const { email } = req.body;
 
-  if (!phone) {
-    return res.status(400).json({ success: false, message: "Phone number required" });
+  if (!email) {
+    return res.status(400).json({ success: false, message: "Email required" });
   }
 
-  // Allow only the single phlebotomist
-  if (phone !== allowedPhone) {
-    return res.status(403).json({ success: false, message: "Phone not allowed" });
-  }
-
-  // Generate a 6-digit OTP
+  // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // valid for 10 minutes
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // valid for 10 mins
 
   try {
-    // Save OTP to the database
+    // Save OTP to database
     await pool.query(
-      "INSERT INTO otps (phone, otp, expires_at) VALUES ($1, $2, $3)",
-      [phone, otp, expiresAt]
+      "INSERT INTO otps (email, otp, expires_at) VALUES ($1, $2, $3)",
+      [email, otp, expiresAt]
     );
 
-    console.log(`OTP saved for ${phone}: ${otp}`);
-    return res.status(200).json({ success: true, message: "OTP generated", otp });
+    // Configure mail transport
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    // Email content
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Your OTP Code for Login",
+      text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
+    };
+
+    // Send email
+    await transporter.sendMail(mailOptions);
+
+    console.log(`✅ OTP sent to ${email}: ${otp}`);
+    return res.status(200).json({ success: true, message: "OTP sent successfully" });
   } catch (err) {
-    console.error("DB Error details:", err);
-    return res.status(500).json({ success: false, message: "Failed to generate OTP" });
+    console.error("❌ Error sending OTP:", err);
+    return res.status(500).json({ success: false, message: "Failed to send OTP" });
   }
 };
 
 // Verify OTP
 const verifyOtp = async (req, res) => {
-  const { phone, otp } = req.body;
+  const { email, otp } = req.body;
 
-  if (!phone || !otp) {
-    return res.status(400).json({ success: false, message: "Phone & OTP required" });
-  }
-
-  // Ensure only the single allowed phone is verified
-  if (phone !== allowedPhone) {
-    return res.status(403).json({ success: false, message: "Phone not allowed" });
+  if (!email || !otp) {
+    return res.status(400).json({ success: false, message: "Email & OTP required" });
   }
 
   try {
-    // Get the latest OTP for the phone
+    // Get latest OTP for the email
     const result = await pool.query(
-      "SELECT * FROM otps WHERE phone = $1 ORDER BY created_at DESC LIMIT 1",
-      [phone]
+      "SELECT * FROM otps WHERE email = $1 ORDER BY created_at DESC LIMIT 1",
+      [email]
     );
 
     if (result.rows.length === 0) {
@@ -69,12 +78,13 @@ const verifyOtp = async (req, res) => {
 
     // Check match
     if (latestOtp.otp === otp) {
+      console.log(`✅ OTP verified for ${email}`);
       return res.status(200).json({ success: true, message: "OTP verified" });
     } else {
       return res.status(400).json({ success: false, message: "Invalid OTP" });
     }
   } catch (err) {
-    console.error("DB Error:", err);
+    console.error("❌ Error verifying OTP:", err);
     return res.status(500).json({ success: false, message: "Error verifying OTP" });
   }
 };
