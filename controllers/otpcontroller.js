@@ -1,7 +1,9 @@
-// otpController.js
-const pool = require("../db");
-const nodemailer = require("nodemailer");
-require("dotenv").config();
+import pool from "../db.js";            // Note the .js extension
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+
+dotenv.config();                        // Same effect as require("dotenv").config()
+
 
 // Send OTP via Email
 const sendOtp = async (req, res) => {

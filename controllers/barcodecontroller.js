@@ -1,5 +1,6 @@
-const { nanoid } = require('nanoid');
-const pool = require('../db');
+import { nanoid } from "nanoid";  // ✅ Correct
+import pool from "../db.js";       // ✅ Already correct
+
 
 // Function to insert barcodes
 async function insertBarcodes(count = 10) {

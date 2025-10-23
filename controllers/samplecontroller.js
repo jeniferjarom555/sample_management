@@ -1,6 +1,6 @@
 // controllers/samplecontroller.js
-const { v4: uuidv4 } = require('uuid');
-const pool = require('../db');
+import { v4 as uuidv4 } from 'uuid';
+import pool from '../db.js';
 
 // =====================
 // Add Test to Patient

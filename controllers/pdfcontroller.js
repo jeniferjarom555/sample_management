@@ -1,8 +1,15 @@
-const PDFDocument = require('pdfkit');
-const bwipjs = require('bwip-js');
-const pool = require('../db');
-const path = require('path');
-const fs = require('fs');
+import PDFDocument from 'pdfkit';
+import bwipjs from 'bwip-js';
+import pool from '../db.js';          // Always include .js in ES module imports
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// To use __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 
 async function generatePDF(req, res) {
     try {
