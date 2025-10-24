@@ -1,10 +1,17 @@
 import pool from "../db.js";
 import dotenv from "dotenv";
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
 dotenv.config();
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Configure Nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 // Send OTP
 const sendOtp = async (req, res) => {
@@ -19,23 +26,23 @@ const sendOtp = async (req, res) => {
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
   try {
-    // Save to DB
+    // Save OTP to DB
     await pool.query(
       "INSERT INTO otps (email, otp, expires_at) VALUES ($1, $2, $3)",
       [email, otp, expiresAt]
     );
 
-    // Send via Resend
-    await resend.emails.send({
-      from: "Bethel Diagnostics 🧪 <no-reply@bethellabs.com>",
-
-// you can customize later
+    // Send OTP via email
+    const mailOptions = {
+      from: `"Bethel Lab" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Your OTP Code for Login",
       text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
-    });
+    };
 
-    console.log(`✅ OTP sent via Resend to ${email}`);
+    await transporter.sendMail(mailOptions);
+
+    console.log(`✅ OTP sent via Nodemailer to ${email}`);
 
     return res.status(200).json({
       success: true,
@@ -43,16 +50,20 @@ const sendOtp = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Error sending OTP:", err);
-    return res.status(500).json({ success: false, message: "Failed to send OTP" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to send OTP" });
   }
 };
 
-
-
+// Verify OTP
 const verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
 
-  if (!email || !otp) return res.status(400).json({ success: false, message: "Email & OTP required" });
+  if (!email || !otp)
+    return res
+      .status(400)
+      .json({ success: false, message: "Email & OTP required" });
 
   try {
     const result = await pool.query(
@@ -60,21 +71,33 @@ const verifyOtp = async (req, res) => {
       [email]
     );
 
-    if (result.rows.length === 0) return res.status(400).json({ success: false, message: "OTP not found" });
+    if (result.rows.length === 0)
+      return res
+        .status(400)
+        .json({ success: false, message: "OTP not found" });
 
     const latestOtp = result.rows[0];
 
-    if (new Date() > latestOtp.expires_at) return res.status(400).json({ success: false, message: "OTP expired" });
+    if (new Date() > latestOtp.expires_at)
+      return res
+        .status(400)
+        .json({ success: false, message: "OTP expired" });
 
     if (latestOtp.otp === otp) {
       console.log(`✅ OTP verified for ${email}`);
-      return res.status(200).json({ success: true, message: "OTP verified" });
+      return res
+        .status(200)
+        .json({ success: true, message: "OTP verified" });
     } else {
-      return res.status(400).json({ success: false, message: "Invalid OTP" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid OTP" });
     }
   } catch (err) {
     console.error("❌ Error verifying OTP:", err);
-    return res.status(500).json({ success: false, message: "Error verifying OTP" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Error verifying OTP" });
   }
 };
 
